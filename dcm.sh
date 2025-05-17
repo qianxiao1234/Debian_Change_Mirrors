@@ -7,6 +7,8 @@ SELECTED_MIRROR_UBUNTU=""
 SELECTED_MIRROR_CENTOS_BASE_URL="" # e.g., https://mirrors.aliyun.com/centos/
 SELECTED_MIRROR_ROCKY_BASE_URL=""  # e.g., https://mirrors.aliyun.com/rockylinux/
 SELECTED_MIRROR_RHEL_BASE_URL=""   # Placeholder, RHEL is complex due to subscriptions
+SELECTED_MIRROR_ARCH=""
+SELECTED_MIRROR_FEDORA=""
 
 # Function to display messages
 msg() {
@@ -59,6 +61,8 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="https://mirrors.bfsu.edu.cn/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="http://mirrors.bfsu.edu.cn/centos/" # Often HTTP for older CentOS
             SELECTED_MIRROR_ROCKY_BASE_URL="https://mirrors.bfsu.edu.cn/rocky/" # Assuming path, verify actual
+            SELECTED_MIRROR_ARCH="https://mirrors.bfsu.edu.cn/archlinux/"
+            SELECTED_MIRROR_FEDORA="http://mirrors.bfsu.edu.cn/fedora/" # Verify actual BFSU path for fedora
             msg "已选择 BFSU 镜像."
             ;;
         2) # TSINGHUA
@@ -67,6 +71,8 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="https://mirrors.tuna.tsinghua.edu.cn/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="https://mirrors.tuna.tsinghua.edu.cn/centos/"
             SELECTED_MIRROR_ROCKY_BASE_URL="https://mirrors.tuna.tsinghua.edu.cn/rockylinux/"
+            SELECTED_MIRROR_ARCH="https://mirrors.tuna.tsinghua.edu.cn/archlinux/"
+            SELECTED_MIRROR_FEDORA="https://mirrors.tuna.tsinghua.edu.cn/fedora/"
             msg "已选择 清华大学镜像."
             ;;
         3) # TENCENT
@@ -75,6 +81,8 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="https://mirrors.cloud.tencent.com/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="https://mirrors.cloud.tencent.com/centos/"
             SELECTED_MIRROR_ROCKY_BASE_URL="https://mirrors.cloud.tencent.com/rockylinux/"
+            SELECTED_MIRROR_ARCH="https://mirrors.cloud.tencent.com/archlinux/"
+            SELECTED_MIRROR_FEDORA="https://mirrors.cloud.tencent.com/fedora/"
             msg "已选择 腾讯云镜像."
             ;;
         4) # ALICLOUD
@@ -83,6 +91,8 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="https://mirrors.aliyun.com/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="https://mirrors.aliyun.com/centos/"
             SELECTED_MIRROR_ROCKY_BASE_URL="https://mirrors.aliyun.com/rockylinux/"
+            SELECTED_MIRROR_ARCH="https://mirrors.aliyun.com/archlinux/"
+            SELECTED_MIRROR_FEDORA="https://mirrors.aliyun.com/fedora/"
             msg "已选择 阿里云镜像."
             ;;
         5) # HUAWEI
@@ -91,6 +101,8 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="https://mirrors.huaweicloud.com/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="https://repo.huaweicloud.com/centos/" # Note: repo subdomain
             SELECTED_MIRROR_ROCKY_BASE_URL="https://repo.huaweicloud.com/rockylinux/"
+            SELECTED_MIRROR_ARCH="https://repo.huaweicloud.com/archlinux/"
+            SELECTED_MIRROR_FEDORA="https://repo.huaweicloud.com/fedora/"
             msg "已选择 华为云镜像."
             ;;
         6) # OFFICIAL
@@ -99,6 +111,9 @@ select_mirror() {
             SELECTED_MIRROR_UBUNTU="http://archive.ubuntu.com/ubuntu/"
             SELECTED_MIRROR_CENTOS_BASE_URL="OFFICIAL" # Special handling for RHEL family official
             SELECTED_MIRROR_ROCKY_BASE_URL="OFFICIAL"
+            SELECTED_MIRROR_RHEL_BASE_URL="OFFICIAL"
+            SELECTED_MIRROR_ARCH="OFFICIAL"
+            SELECTED_MIRROR_FEDORA="OFFICIAL"
             msg "已选择 官方源."
             ;;
         *) error_exit "无效选项，退出脚本.";;
@@ -227,11 +242,14 @@ handle_rhel_family() {
             warn "将尝试使用通用 RHEL 镜像路径，请谨慎操作。"
             base_url_to_use="$SELECTED_MIRROR_RHEL_BASE_URL" # This needs to be defined or handled if empty
             if [ -z "$base_url_to_use" ]; then
-                warn "RHEL 的镜像基础 URL 未在脚本中定义，跳过 RHEL 软件源更改。"
+                warn "RHEL 的自定义镜像基础 URL 未在脚本中为所选镜像提供，跳过 RHEL 软件源更改。"
+                msg "将维持官方源（如果之前是官方源）或现有配置。"
                 return
+            elif [ "$base_url_to_use" != "OFFICIAL" ]; then
+                 warn "将尝试使用通用 RHEL 镜像路径 ($base_url_to_use)，请谨慎操作。"
             fi
             ;;
-        *) error_exit "Unsupported RHEL family OS: $os_id" ;;
+        *) error_exit "Unsupported RHEL family OS passed to handler: $os_id" ;;
     esac
 
     if [ "$base_url_to_use" = "OFFICIAL" ]; then
@@ -312,7 +330,7 @@ handle_rhel_family() {
                     # We need to capture the path part after the OS name and release version.
                     # This generalized sed tries to replace the scheme and authority part of the URL.
                     # It assumes the mirror provides the standard directory structure after $base_url_to_use.
-                    sed -i -E "s|^(#)?baseurl=https?://[^/]+/(centos|rockylinux|epel)/([0-9.]+|\\\$releasever)/(.+)|baseurl=${base_url_to_use%/}/\3/\4|gI" "$repo_file"
+                    sed -i -E "s|^(#)?baseurl=https?://[^/]+/(centos|rockylinux|epel)/([0-9.]+|\\\$releasever|stream)/(.+)|baseurl=${base_url_to_use%/}/\3/\4|gI" "$repo_file"
 
 
                 fi
@@ -326,6 +344,85 @@ handle_rhel_family() {
         msg "请运行 'dnf clean all && dnf makecache' (或 'yum clean all && yum makecache') 更新缓存."
     fi
 
+}
+
+# Function to handle Arch Linux and Manjaro
+handle_arch_manjaro() {
+    local os_name_display="$1" 
+    local mirror_base_url="$SELECTED_MIRROR_ARCH"
+
+    msg "正在为 $os_name_display 配置软件源..."
+    backup_item "/etc/pacman.d/mirrorlist"
+
+    if [ "$mirror_base_url" = "OFFICIAL" ]; then
+        msg "已选择官方源。Arch Linux/Manjaro 的官方源通常通过 /etc/pacman.d/mirrorlist 中的多个条目提供。"
+        msg "建议使用 'reflector' 工具优化官方镜像列表，或确保现有列表是最新的。"
+        if [ ! -s "/etc/pacman.d/mirrorlist" ] || ! grep -q -E '^\\s*Server\\s*=' /etc/pacman.d/mirrorlist; then
+             msg "检测到 mirrorlist 为空或无有效服务器, 写入一个默认的地理位置分发服务器。"
+             echo "Server = https://geo.mirror.pkgbuild.com/\\$repo/os/\\$arch" > /etc/pacman.d/mirrorlist
+        else
+            msg "此脚本不会修改现有的官方镜像列表，除非它为空。"
+        fi
+    elif [ -z "$mirror_base_url" ]; then
+        error_exit "未选择 $os_name_display 的有效镜像 URL。"
+    else
+        msg "将 /etc/pacman.d/mirrorlist 替换为单个选择的镜像: $mirror_base_url"
+        [[ "$mirror_base_url" != */ ]] && mirror_base_url="${mirror_base_url}/"
+        cat <<EOF > /etc/pacman.d/mirrorlist
+## $os_name_display repository mirrorlist generated by dcm.sh
+## Selected mirror: $mirror_base_url
+Server = ${mirror_base_url}\$repo/os/\$arch
+EOF
+    fi
+    msg "$os_name_display mirrorlist 处理完毕！请运行 'sudo pacman -Syyu' 来同步和更新系统。"
+}
+
+# Function to handle Fedora
+handle_fedora() {
+    local version_id="$1" # $releasever
+    local base_url_to_use="$SELECTED_MIRROR_FEDORA"
+    local official_handling=false
+
+    msg "正在为 Fedora $version_id 配置软件源..."
+
+    if [ "$base_url_to_use" = "OFFICIAL" ]; then
+        official_handling=true
+        msg "为 Fedora 配置官方软件源 (尝试恢复 metalink)..."
+    elif [ -z "$base_url_to_use" ]; then
+        error_exit "未选择 Fedora 的有效镜像 URL。"
+    else
+        msg "使用镜像: $base_url_to_use"
+    fi
+
+    backup_item "/etc/yum.repos.d"
+
+    for repo_file in /etc/yum.repos.d/fedora*.repo; do
+        if [ -f "$repo_file" ]; then
+            msg "处理 $repo_file ..."
+            if $official_handling; then
+                sed -i -E 's/^#(metalink=.*)/\1/' "$repo_file"
+                sed -i -E 's/^(baseurl=.*)/#/\1/' "$repo_file"
+            else
+                sed -i -E 's/^(metalink=.*)/#/\1/' "$repo_file"
+                [[ "$base_url_to_use" != */ ]] && base_url_to_use="${base_url_to_use%/}" # Ensure no trailing slash for Fedora paths usually
+                
+                # Replace scheme and host part of baseurl, preserving the rest of the Fedora path structure.
+                # Example original: baseurl=http://dl.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/
+                # Example target:   baseurl=${base_url_to_use}/releases/$releasever/Everything/$basearch/os/
+                # The SELECTED_MIRROR_FEDORA is like "https://mirrors.tuna.tsinghua.edu.cn/fedora"
+                # The original paths are like "/pub/fedora/linux/releases/.../" or "/linux/releases/.../"
+                sed -i -E "s|^(#\\s*)?(baseurl=)https?://[^/]+/(pub/fedora/linux/|fedora/linux/|fedora/)?(releases|updates|updates-testing|development)/|\\2${base_url_to_use}/\\4/|gI" "$repo_file"
+                # Ensure that baseurls that were commented out are uncommented if we set them
+                sed -i -E "s|^#(baseurl=${base_url_to_use}.*)|baseurl=${base_url_to_use}.*|gI" "$repo_file"
+            fi
+        fi
+    done
+    msg "Fedora .repo 文件处理完毕！"
+    if $official_handling; then
+        msg "请运行 'sudo dnf clean all' 使更改生效."
+    else
+        msg "请运行 'sudo dnf clean all && sudo dnf makecache' 更新缓存."
+    fi
 }
 
 # --- Main Script ---
@@ -359,13 +456,11 @@ OS_VERSION_CODENAME=$(grep '^VERSION_CODENAME=' /etc/os-release | cut -d= -f2- |
 OS_VERSION_ID=$(grep '^VERSION_ID=' /etc/os-release | cut -d= -f2- | tr -d '"') # For RHEL family
 
 # Fallback for VERSION_CODENAME if not present (e.g. on some CentOS/RHEL minimal)
-if [ -z "$OS_VERSION_CODENAME" ] && [[ "$OS_ID" == "centos" || "$OS_ID" == "rhel" || "$OS_ID" == "rocky" ]]; then
-    # For RHEL family, VERSION_CODENAME might not be as critical as VERSION_ID for repo paths
-    # but it can be used for display or some specific repos.
-    # Let's try to derive it for display if possible or use VERSION_ID.
-    OS_VERSION_CODENAME=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2- | tr -d '"' | awk '{print $3,$4}') # Very rough
-    if [ -z "$OS_VERSION_CODENAME" ]; then
-      OS_VERSION_CODENAME=$OS_VERSION_ID # Use version ID if codename is empty
+if [ -z "$OS_VERSION_CODENAME" ] && [[ "$OS_ID" == "centos" || "$OS_ID" == "rhel" || "$OS_ID" == "rocky" || "$OS_ID" == "fedora" ]]; then
+    if [ -n "$OS_VERSION_ID" ]; then
+        OS_VERSION_CODENAME=$OS_VERSION_ID # Use version ID as codename if actual codename is missing
+    else
+        OS_VERSION_CODENAME=$(grep '^PRETTY_NAME=' /etc/os-release | cut -d= -f2- | tr -d '"' | awk '{print $3,$4}')
     fi
 fi
 
@@ -384,28 +479,47 @@ case "$OS_ID" in
         # For now, direct ID match.
         handle_rhel_family "$OS_ID" "$OS_VERSION_ID" # "$OS_VERSION_CODENAME" could be passed if needed
         ;;
+    arch)
+        handle_arch_manjaro "$OS_ID"
+        ;;
+    manjaro)
+        warn "Manjaro 将尝试使用 Arch Linux 兼容的镜像。Manjaro 特定的分支和镜 estrutura 未在此版本中完全支持。"
+        handle_arch_manjaro "$OS_ID"
+        ;;
+    fedora)
+        handle_fedora "$OS_VERSION_ID"
+        ;;
     *)
         # Check ID_LIKE for broader compatibility
-        ID_LIKE=$(grep '^ID_LIKE=' /etc/os-release | cut -d= -f2- | tr -d '"' | tr '[:upper:]' '[:lower:]')
-        if echo "$ID_LIKE" | grep -q "debian"; then
-            warn "检测到类 Debian 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 Debian/Kali 逻辑..."
-            # Determine if it's more like Kali or Debian based on other factors if necessary
-            # For now, default to Debian mirror URL if SELECTED_MIRROR_DEBIAN is set.
-            if [ -n "$SELECTED_MIRROR_DEBIAN" ]; then
-                 handle_debian_family "debian" "$OS_VERSION_CODENAME" # Treat as Debian
-            else
-                 error_exit "未选择 Debian 兼容的镜像，无法处理 $OS_ID."
-            fi
-        elif echo "$ID_LIKE" | grep -q "rhel\|fedora"; then
-             warn "检测到类 RHEL 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 RHEL 家族逻辑..."
-             # Need to decide which base URL to use (CentOS, Rocky etc.)
-             # This part can be refined based on specific ID_LIKE values (e.g. "alma", "oracle")
-             if [ -n "$SELECTED_MIRROR_CENTOS_BASE_URL" ]; then # Default to CentOS mirror for generic RHEL-like
-                handle_rhel_family "centos" "$OS_VERSION_ID" # Treat as CentOS for mirror purposes
+        ID_LIKE=$(grep '^ID_LIKE=' /etc/os-release | cut -d= -f2- | tr -d '"' | tr '[:upper:]' '[:lower:]' 2>/dev/null || true)
+        local handled_by_id_like=false
+        if echo "$ID_LIKE" | grep -q "arch"; then
+             warn "检测到类 Arch 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 Arch Linux 逻辑..."
+             handle_arch_manjaro "$OS_ID"
+             handled_by_id_like=true
+        elif echo "$ID_LIKE" | grep -q "fedora"; then
+             warn "检测到类 Fedora 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 Fedora 逻辑... (OS_VERSION_ID: $OS_VERSION_ID)"
+             handle_fedora "$OS_VERSION_ID"
+             handled_by_id_like=true
+        elif echo "$ID_LIKE" | grep -q "debian"; then
+             warn "检测到类 Debian 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 Debian/Kali 逻辑..."
+             if [ -n "$SELECTED_MIRROR_DEBIAN" ]; then
+                  handle_debian_family "debian" "$OS_VERSION_CODENAME"
              else
-                error_exit "未选择 RHEL 兼容的镜像（如 CentOS），无法处理 $OS_ID."
+                  error_exit "未选择 Debian 兼容的镜像，无法处理 $OS_ID."
              fi
-        else
+             handled_by_id_like=true
+        elif echo "$ID_LIKE" | grep -q "rhel" || echo "$ID_LIKE" | grep -q "centos"; then
+             warn "检测到类 RHEL/CentOS 系统 ($OS_ID via ID_LIKE=$ID_LIKE)，尝试使用 RHEL 家族逻辑..."
+             if [ -n "$SELECTED_MIRROR_CENTOS_BASE_URL" ]; then
+                handle_rhel_family "centos" "$OS_VERSION_ID"
+             else
+                error_exit "未选择 RHEL/CentOS 兼容的镜像，无法处理 $OS_ID."
+             fi
+             handled_by_id_like=true
+        fi
+
+        if ! $handled_by_id_like; then
             error_exit "不支持的操作系统: $OS_ID. ID_LIKE: $ID_LIKE. 无法自动配置。"
         fi
         ;;
