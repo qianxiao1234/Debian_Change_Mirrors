@@ -13,6 +13,6 @@ sudo ./dcm.sh
 ## 国内用户请使用
 ```sh
 wget -O dcm.sh https://gitee.com/qianxiao1234/Debian_Change_Mirrors/raw/main/dcm.sh
-chmod 777 ucm.sh
+chmod 777 dcm.sh
 sudo ./dcm.sh
 ```
