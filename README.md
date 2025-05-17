@@ -6,13 +6,13 @@
 ## 使用方法
 运行以下命令
 ```sh
-wget -O ucm.sh https://raw.githubusercontent.com/qianxiao1234/Debian_Change_Mirrors/main/dcm.sh
-chmod 777 ucm.sh
-sudo ./ucm.sh
+wget -O dcm.sh https://raw.githubusercontent.com/qianxiao1234/Debian_Change_Mirrors/main/dcm.sh
+chmod 777 dcm.sh
+sudo ./dcm.sh
 ```
 ## 国内用户请使用
 ```sh
-wget -O ucm.sh https://gitee.com/qianxiao1234/Debian_Change_Mirrors/raw/main/dcm.sh
+wget -O dcm.sh https://gitee.com/qianxiao1234/Debian_Change_Mirrors/raw/main/dcm.sh
 chmod 777 ucm.sh
-sudo ./ucm.sh
+sudo ./dcm.sh
 ```
