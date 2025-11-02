@@ -45,7 +45,10 @@ if [ -f "/etc/apt/sources.list.d/debian.sources" ]; then
         cp /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list.d/debian.sources.bak
         echo "已创建备份文件 /etc/apt/sources.list.d/debian.sources.bak"
     fi
-    sed -i 's#^URIs: .*#URIs: https://mirrors.ustc.edu.cn/debian/#' /etc/apt/sources.list.d/debian.sources
+    # 替换非安全更新源
+    sed -i '/^URIs:/ { /security/! s#.*#URIs: https://mirrors.ustc.edu.cn/debian/# }' /etc/apt/sources.list.d/debian.sources
+    # 替换安全更新源
+    sed -i '/^URIs:/ { /security/ s#.*#URIs: https://mirrors.ustc.edu.cn/debian-security/# }' /etc/apt/sources.list.d/debian.sources
     echo "执行完毕！"
 else
     echo "未检测到sources文件，将使用传统方式替换"
